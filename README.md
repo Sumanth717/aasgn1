@@ -1,73 +1,52 @@
 # asgn1
 library IEEE;
-use IEEE.std_logic_1164.all;
+use IEEE.STD_LOGIC_1164.ALL;
 
-entity reg_file is
-    generic (
-        DATA_WIDTH : natural := 32;
-        ADDR_WIDTH : natural := 5
+entity Register_File is
+    Port (
+        clk : in STD_LOGIC;
+        reset : in in STD_LOGIC;
+        read_port1_en : in STD_LOGIC;
+        read_port2_en : in STD_LOGIC;
+        write_port1_en : in STD_LOGIC;
+        write_port2_en : in STD_LOGIC;
+        write_data1 : in STD_LOGIC_VECTOR(31 downto 0);
+        write_data2 : in STD_LOGIC_VECTOR(31 downto 0);
+        read_data1 : out STD_LOGIC_VECTOR(31 downto 0);
+        read_data2 : out STD_LOGIC_VECTOR(31 downto 0)
     );
-    port (
-        clk : in std_logic;
-        rst : in std_logic;
+end Register_File;
 
-        -- Read Ports
-        ra1 : in std_logic_vector(ADDR_WIDTH - 1 downto 0);
-        rd1 : out std_logic_vector(DATA_WIDTH - 1 downto 0);
-        ra2 : in std_logic_vector(ADDR_WIDTH - 1 downto 0);
-        rd2 : out std_logic_vector(DATA_WIDTH - 1 downto 0);
-
-        -- Write Ports
-        wa1 : in std_logic_vector(ADDR_WIDTH - 1 downto 0);
-        wd1 : in std_logic_vector(DATA_WIDTH - 1 downto 0);
-        wa2 : in std_logic_vector(ADDR_WIDTH - 1 downto 0);
-        wd2 : in std_logic_vector(DATA_WIDTH - 1 downto 0)
-    );
-end reg_file;
-
-architecture behavioral of reg_file is
-
-    signal regs : std_logic_vector(DATA_WIDTH * 32 - 1 downto 0);
-    signal r15_xor_r2 : std_logic_vector(DATA_WIDTH - 1 downto 0);
-
+architecture Behavioral of Register_File is
+    type Register is array(0 to 31) of STD_LOGIC_VECTOR(31 downto 0);
+    signal registers : Register;
 begin
-
-    -- Initialize register R31 to Year of Birth
-    process(rst)
+    process (clk, reset)
     begin
-        if rst = '1' then
-            regs <= (others => '0');
-        end if;
-    end process;
-
-    -- R15 shall always receive R, XOR R2 at every clock cycle
-    process(clk)
-    begin
-        if clk = '1' and clk'event then
-            r15_xor_r2 <= regs(R15 * DATA_WIDTH + DATA_WIDTH - 1 downto R15 * DATA_WIDTH) xor regs(R2 * DATA_WIDTH + DATA_WIDTH - 1 downto R2 * DATA_WIDTH);
-            if rst = '0' then
-                regs(R15 * DATA_WIDTH + DATA_WIDTH - 1 downto R15 * DATA_WIDTH) <= r15_xor_r2;
+        if reset = '1' then
+            -- Initialize the registers, setting R31 with your birthdate
+            registers(31) <= "DD/MM/YYYY";  -- Replace with actual date
+        elsif rising_edge(clk) then
+            if write_port1_en = '1' then
+                -- Write to registers, including the XOR operation for R15
+                if write_data1 = registers(15) then
+                    registers(15) <= write_data1 XOR write_data2;
+                else
+                    registers(15) <= write_data1;
+                end if;
+            end if;
+            if write_port2_en = '1' then
+                -- Write to registers
+                -- You can implement the write to registers R16 to R0 here
+            end if;
+            if read_port1_en = '1' then
+                -- Read from registers R31 to R16
+                read_data1 <= registers(to_integer(unsigned(write_data1(4 downto 0))));
+            end if;
+            if read_port2_en = '1' then
+                -- Read from registers R15 to R0
+                read_data2 <= registers(to_integer(unsigned(write_data2(4 downto 0)));
             end if;
         end if;
     end process;
-
-    -- Read Ports
-    assign rd1 <= regs(ra1 * DATA_WIDTH + DATA_WIDTH - 1 downto ra1 * DATA_WIDTH);
-    assign rd2 <= regs(ra2 * DATA_WIDTH + DATA_WIDTH - 1 downto ra2 * DATA_WIDTH);
-
-    -- Write Ports
-    process(clk)
-    begin
-        if clk = '1' and clk'event then
-            if rst = '0' then
-                if wa1 /= (others => 'X') then
-                    regs(wa1 * DATA_WIDTH + DATA_WIDTH - 1 downto wa1 * DATA_WIDTH) <= wd1;
-                end if;
-                if wa2 /= (others => 'X') then
-                    regs(wa2 * DATA_WIDTH + DATA_WIDTH - 1 downto wa2 * DATA_WIDTH) <= wd2;
-                end if;
-            end if;
-        end if;
-    end process;
-
-end behavioral;
+end Behavioral;
